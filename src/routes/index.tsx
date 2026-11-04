@@ -1,14 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { HomePage } from '@/features/home/home-page'
 
 export const Route = createFileRoute('/')({
-  component: IndexComponent,
+  component: HomePage,
 })
-
-function IndexComponent() {
-  return (
-    <div>
-      <h1>Dự án môn học - Frontend</h1>
-      <p>React 19 + Vite + TanStack Router & Query</p>
-    </div>
-  )
-}
