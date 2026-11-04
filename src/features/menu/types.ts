@@ -26,4 +26,5 @@ export interface Product {
   badge?: string
   sizes: SizeOption[]
   toppings: Topping[]
+  available?: boolean
 }

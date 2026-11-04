@@ -8,6 +8,8 @@ import { uiActions, useAuthMode, useAuthSource, useIsAuthOpen } from '@/lib/ui.s
 import { authActions } from '../auth.store'
 import { getDisplayName, MIN_PASSWORD_LENGTH, validateCredentials, validateRegistration } from '../utils'
 
+export const DEMO_ADMIN_EMAIL = 'admin@brewlite.vn'
+
 const labelClass = 'mt-3.5 flex flex-col gap-1.5 text-xs font-extrabold'
 const inputClass =
   'min-h-12 rounded-[11px] border border-line bg-white px-3.5 text-[13px] font-medium outline-0 focus:border-forest'
@@ -42,7 +44,11 @@ function AuthDialogContent({ mode: initialMode, source }: AuthDialogContentProps
       return
     }
 
-    authActions.login({ email, name: mode === 'register' ? name.trim() : getDisplayName(email) })
+    authActions.login({
+      email,
+      name: mode === 'register' ? name.trim() : getDisplayName(email),
+      role: email.trim().toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'customer',
+    })
     uiActions.closeAuth()
     if (source === 'checkout') {
       void navigate({ to: '/checkout' })

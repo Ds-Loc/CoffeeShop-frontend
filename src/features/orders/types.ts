@@ -14,6 +14,8 @@ export interface Order {
   paymentMethod: PaymentMethod
   walletProvider?: WalletProvider
   status: OrderStatus
+  customerEmail?: string
+  customerName?: string
   /** ISO 8601. */
   createdAt: string
 }

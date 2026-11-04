@@ -7,9 +7,10 @@ import type { Order } from '../types'
 import { StatusPill } from './status-pill'
 
 const TIMELINE_STEPS = [
-  { key: 'paid', label: 'Đã thanh toán', note: 'Vừa xong' },
-  { key: 'preparing', label: 'Đang chuẩn bị', note: 'Khoảng 10 phút' },
-  { key: 'ready', label: 'Sẵn sàng nhận', note: 'Tại quầy' },
+  { key: 'PAID', label: 'Đã thanh toán', note: 'Vừa xong' },
+  { key: 'PREPARING', label: 'Đang chuẩn bị', note: 'Khoảng 10 phút' },
+  { key: 'READY', label: 'Sẵn sàng nhận', note: 'Tại quầy' },
+  { key: 'COMPLETED', label: 'Đã hoàn tất', note: 'Cảm ơn bạn' },
 ] as const
 
 const metaLabelClass = 'text-[11px] text-muted'
@@ -27,10 +28,11 @@ export function OrderTicket({ order }: { order: Order }) {
 
       <hr className="my-6 border-t border-dashed border-line-strong" />
 
-      <ol className="relative grid grid-cols-3 before:absolute before:top-4 before:right-[16.6%] before:left-[16.6%] before:h-px before:bg-stone-300">
+      <ol className="relative grid grid-cols-4 before:absolute before:top-4 before:right-[12.5%] before:left-[12.5%] before:h-px before:bg-stone-300">
         {TIMELINE_STEPS.map((step, index) => {
-          const isDone = index === 0
-          const isActive = index === 1
+          const currentIndex = TIMELINE_STEPS.findIndex((item) => item.key === order.status)
+          const isDone = order.status !== 'CANCELLED' && index < currentIndex
+          const isActive = order.status !== 'CANCELLED' && index === currentIndex
           return (
             <li className="z-10 flex flex-col items-center text-center" key={step.key}>
               <span

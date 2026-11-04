@@ -68,6 +68,16 @@ export function Header() {
                   >
                     Đơn hàng của tôi
                   </Link>
+                    {session.role === 'admin' && (
+                      <Link
+                        className="block rounded-full px-3 py-2.5 text-xs font-bold text-forest hover:bg-lime-soft"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        role="menuitem"
+                        to="/admin"
+                      >
+                        Quản trị BrewLite
+                      </Link>
+                    )}
                   <button
                     className="w-full rounded-full px-3 py-2.5 text-left text-xs font-bold text-danger hover:bg-lime-soft"
                     onClick={() => {

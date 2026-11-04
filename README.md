@@ -68,6 +68,10 @@ npm run preview
 | `/checkout` | Xác nhận thông tin và thanh toán đơn hàng | Phải có phiên đăng nhập và giỏ hàng không rỗng |
 | `/orders` | Lịch sử đơn hàng | Không |
 | `/orders/:orderId` | Chi tiết đơn hàng và trạng thái đơn | Không |
+| `/admin` | Dashboard vận hành | Session role `admin` |
+| `/admin/orders` | Theo dõi và cập nhật trạng thái đơn | Session role `admin` |
+| `/admin/menu` | Quản lý món và trạng thái hiển thị | Session role `admin` |
+| `/admin/customers` | Tổng hợp khách hàng từ đơn online | Session role `admin` |
 
 Router được khai báo theo file-based routing trong [src/routes/](./src/routes/). File [src/routeTree.gen.ts](./src/routeTree.gen.ts) được TanStack Router tự sinh, không nên chỉnh sửa thủ công.
 
@@ -95,6 +99,7 @@ src/
 │   ├── home/             # Hero, benefits và trang chủ
 │   ├── menu/             # Sản phẩm, menu section và customizer
 │   ├── orders/           # Lịch sử, ticket và trạng thái đơn
+│   └── admin/            # Layout, dashboard và nghiệp vụ quản trị
 │   └── test-connection/  # Kiểm tra kết nối backend
 ├── lib/                  # Axios, store, format, class name và UI state
 ├── routes/               # Định nghĩa route của TanStack Router
@@ -110,6 +115,9 @@ Phiên bản hiện tại chạy được độc lập để demo:
 - Tạo đơn đang mô phỏng độ trễ thanh toán trong [src/features/checkout/api.ts](./src/features/checkout/api.ts).
 - Axios đã được cấu hình sẵn trong [src/lib/axios.ts](./src/lib/axios.ts) để kết nối backend sau này.
 - Một số state phía client được lưu bằng `localStorage`, gồm phiên đăng nhập, giỏ hàng và lịch sử đơn hàng.
+- Tài khoản admin demo dùng email `admin@brewlite.vn`; role chỉ là cơ chế demo phía client, không thay thế phân quyền backend.
+- Admin và menu khách dùng chung product store `brewlite:products`; món có `available: false` sẽ không hiển thị ở menu khách.
+- Dashboard admin tính số liệu từ order store `brewlite:orders`, không dùng số liệu report hard-code.
 
 Khi backend sẵn sàng, thay implementation trong các file API của feature bằng request Axios tương ứng, đồng thời giữ nguyên kiểu dữ liệu trong các file `types.ts`.
 

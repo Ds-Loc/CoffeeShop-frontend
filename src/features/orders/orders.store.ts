@@ -8,8 +8,20 @@ const ordersStore = createStore<Order[]>([], {
 
 export const ordersActions = {
   add: (order: Order) => ordersStore.setState((orders) => [...orders, order]),
-  updateStatus: (id: string, status: OrderStatus) =>
-    ordersStore.setState((orders) => orders.map((order) => (order.id === id ? { ...order, status } : order))),
+  updateStatus: (id: string, status: OrderStatus): boolean => {
+    const order = ordersStore.getState().find((item) => item.id === id)
+    if (!order) return false
+    const allowed: Record<OrderStatus, OrderStatus[]> = {
+      PAID: ['PREPARING', 'CANCELLED'],
+      PREPARING: ['READY', 'CANCELLED'],
+      READY: ['COMPLETED'],
+      COMPLETED: [],
+      CANCELLED: [],
+    }
+    if (!allowed[order.status].includes(status)) return false
+    ordersStore.setState((orders) => orders.map((item) => (item.id === id ? { ...item, status } : item)))
+    return true
+  },
 }
 
 export const useOrders = () => useStore(ordersStore)
