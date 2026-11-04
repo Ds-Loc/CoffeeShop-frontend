@@ -28,7 +28,7 @@ function CartDrawerContent() {
     if (getSession()) {
       void navigate({ to: '/checkout' })
     } else {
-      uiActions.openAuth()
+      uiActions.openAuth('login', 'checkout')
     }
   }
 

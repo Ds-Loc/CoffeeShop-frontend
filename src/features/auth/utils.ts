@@ -9,6 +9,19 @@ export const validateCredentials = (email: string, password: string): string | n
   return null
 }
 
+export const validateRegistration = (
+  name: string,
+  email: string,
+  password: string,
+  confirmPassword: string,
+): string | null => {
+  if (!name.trim()) return 'Vui lòng nhập họ tên.'
+  const credentialsError = validateCredentials(email, password)
+  if (credentialsError) return credentialsError
+  if (password !== confirmPassword) return 'Mật khẩu nhập lại không khớp.'
+  return null
+}
+
 /** Suy ra tên hiển thị từ email: "minh.anh@x.com" → "Minh anh". */
 export const getDisplayName = (email: string): string => {
   const rawName = email.split('@')[0].replace(/[._-]/g, ' ')

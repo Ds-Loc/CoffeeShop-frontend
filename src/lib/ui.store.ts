@@ -3,12 +3,20 @@ import { createStore, useStore } from '@/lib/store'
 interface UiState {
   isCartOpen: boolean
   isAuthOpen: boolean
+  authMode: 'login' | 'register'
+  authSource: 'header' | 'checkout'
   toast: string | null
 }
 
 const TOAST_DURATION_MS = 2400
 
-const uiStore = createStore<UiState>({ isCartOpen: false, isAuthOpen: false, toast: null })
+const uiStore = createStore<UiState>({
+  isCartOpen: false,
+  isAuthOpen: false,
+  authMode: 'login',
+  authSource: 'header',
+  toast: null,
+})
 
 let toastTimer: number | undefined
 
@@ -19,7 +27,8 @@ export const uiActions = {
     uiStore.setState((state) => ({ ...state, isCartOpen: true, toast: null }))
   },
   closeCart: () => uiStore.setState((state) => ({ ...state, isCartOpen: false })),
-  openAuth: () => uiStore.setState((state) => ({ ...state, isAuthOpen: true })),
+  openAuth: (mode: 'login' | 'register' = 'login', source: 'header' | 'checkout' = 'header') =>
+    uiStore.setState((state) => ({ ...state, isAuthOpen: true, authMode: mode, authSource: source })),
   closeAuth: () => uiStore.setState((state) => ({ ...state, isAuthOpen: false })),
   showToast: (message: string) => {
     window.clearTimeout(toastTimer)
@@ -30,4 +39,6 @@ export const uiActions = {
 
 export const useIsCartOpen = () => useStore(uiStore, (state) => state.isCartOpen)
 export const useIsAuthOpen = () => useStore(uiStore, (state) => state.isAuthOpen)
+export const useAuthMode = () => useStore(uiStore, (state) => state.authMode)
+export const useAuthSource = () => useStore(uiStore, (state) => state.authSource)
 export const useToast = () => useStore(uiStore, (state) => state.toast)

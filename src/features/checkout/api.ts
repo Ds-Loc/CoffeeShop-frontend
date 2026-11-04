@@ -17,6 +17,7 @@ export const placeOrder = async (payload: PlaceOrderPayload): Promise<Order> => 
     serviceFee: payload.serviceFee,
     total: payload.subtotal + payload.serviceFee,
     paymentMethod: payload.paymentMethod,
+    walletProvider: payload.walletProvider,
     status: 'PAID',
     createdAt: new Date().toISOString(),
   }

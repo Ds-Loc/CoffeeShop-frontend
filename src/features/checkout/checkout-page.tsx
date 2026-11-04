@@ -6,6 +6,7 @@ import { STORE_INFO } from '@/config/store-info'
 import { useCartSummary } from '@/features/cart/hooks'
 import type { PaymentMethod } from '@/features/orders/types'
 import { cn } from '@/lib/cn'
+import type { PaymentDetails } from './types'
 import { usePlaceOrder } from './hooks'
 import { OrderSummary } from './components/order-summary'
 import { PaymentOptions } from './components/payment-options'
@@ -16,10 +17,15 @@ const cardClass = 'rounded-[20px] border border-line bg-paper p-5 sm:p-7'
 export function CheckoutPage() {
   const { items, subtotal, serviceFee } = useCartSummary()
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet')
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({ cardValid: false })
   const [isConfirmed, setIsConfirmed] = useState(false)
   const { mutate: pay, isPending } = usePlaceOrder()
 
-  const handlePay = () => pay({ items, subtotal, serviceFee, paymentMethod })
+  const isPaymentValid = paymentMethod === 'wallet' ? Boolean(paymentDetails.walletProvider) : paymentDetails.cardValid
+  const handlePay = () => {
+    if (!isPaymentValid) return
+    pay({ items, subtotal, serviceFee, paymentMethod, walletProvider: paymentDetails.walletProvider })
+  }
 
   return (
     <main className="shell min-h-[700px] pt-7 pb-24 sm:pt-11">
@@ -56,7 +62,7 @@ export function CheckoutPage() {
                 <p className="text-xs text-muted">Chọn cách bạn muốn thanh toán</p>
               </div>
             </div>
-            <PaymentOptions onChange={setPaymentMethod} value={paymentMethod} />
+            <PaymentOptions onChange={setPaymentMethod} onDetailsChange={setPaymentDetails} value={paymentMethod} />
           </div>
 
           <label className="group flex cursor-pointer items-center gap-2.5 px-1 py-2 text-xs text-muted">
@@ -68,7 +74,7 @@ export function CheckoutPage() {
           </label>
         </section>
 
-        <OrderSummary canPay={isConfirmed} isPaying={isPending} onPay={handlePay} />
+        <OrderSummary canPay={isConfirmed && isPaymentValid} isPaying={isPending} onPay={handlePay} />
       </div>
     </main>
   )

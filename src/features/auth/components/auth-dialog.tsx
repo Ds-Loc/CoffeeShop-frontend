@@ -4,9 +4,9 @@ import { ArrowRightIcon, CloseIcon, UserIcon } from '@/components/icons/icon'
 import { Button } from '@/components/ui/button'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Overlay } from '@/components/ui/overlay'
-import { uiActions, useIsAuthOpen } from '@/lib/ui.store'
+import { uiActions, useAuthMode, useAuthSource, useIsAuthOpen } from '@/lib/ui.store'
 import { authActions } from '../auth.store'
-import { getDisplayName, MIN_PASSWORD_LENGTH, validateCredentials } from '../utils'
+import { getDisplayName, MIN_PASSWORD_LENGTH, validateCredentials, validateRegistration } from '../utils'
 
 const labelClass = 'mt-3.5 flex flex-col gap-1.5 text-xs font-extrabold'
 const inputClass =
@@ -14,26 +14,41 @@ const inputClass =
 
 export function AuthDialog() {
   const isOpen = useIsAuthOpen()
-  return isOpen ? <AuthDialogContent /> : null
+  const mode = useAuthMode()
+  const source = useAuthSource()
+  return isOpen ? <AuthDialogContent mode={mode} source={source} /> : null
 }
 
-function AuthDialogContent() {
+interface AuthDialogContentProps {
+  mode: 'login' | 'register'
+  source: 'header' | 'checkout'
+}
+
+function AuthDialogContent({ mode: initialMode, source }: AuthDialogContentProps) {
   const navigate = useNavigate()
+  const [mode, setMode] = useState(initialMode)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    const validationError = validateCredentials(email, password)
+    const validationError =
+      mode === 'register' ? validateRegistration(name, email, password, confirmPassword) : validateCredentials(email, password)
     if (validationError) {
       setError(validationError)
       return
     }
 
-    authActions.login({ email, name: getDisplayName(email) })
+    authActions.login({ email, name: mode === 'register' ? name.trim() : getDisplayName(email) })
     uiActions.closeAuth()
-    void navigate({ to: '/checkout' })
+    if (source === 'checkout') {
+      void navigate({ to: '/checkout' })
+    } else {
+      uiActions.showToast(mode === 'register' ? 'Tạo tài khoản thành công.' : 'Chào mừng bạn quay lại.')
+    }
   }
 
   return (
@@ -57,16 +72,51 @@ function AuthDialogContent() {
         <span className="mb-6 grid size-12 place-items-center rounded-full bg-lime text-forest">
           <UserIcon />
         </span>
-        <Eyebrow>Chào mừng trở lại</Eyebrow>
+        <div className="mb-5 grid grid-cols-2 rounded-full bg-lime-soft p-1">
+          {(['login', 'register'] as const).map((tab) => (
+            <button
+              className={`min-h-9 rounded-full text-[11px] font-extrabold transition ${
+                mode === tab ? 'bg-forest text-white' : 'text-muted hover:text-forest'
+              }`}
+              key={tab}
+              onClick={() => {
+                setMode(tab)
+                setError('')
+              }}
+              type="button"
+            >
+              {tab === 'login' ? 'Đăng nhập' : 'Đăng ký'}
+            </button>
+          ))}
+        </div>
+        <Eyebrow>{mode === 'login' ? 'Chào mừng trở lại' : 'Tạo tài khoản BrewLite'}</Eyebrow>
         <h2 className="mt-2 mb-2 font-display text-3xl font-medium tracking-tight" id="login-title">
-          Đăng nhập để tiếp tục
+          {mode === 'login' ? 'Đăng nhập để tiếp tục' : 'Đăng ký tài khoản'}
         </h2>
-        <p className="mb-6 text-xs leading-relaxed text-muted">Đăng nhập nhanh để lưu và theo dõi đơn hàng của bạn.</p>
+        <p className="mb-6 text-xs leading-relaxed text-muted">
+          {mode === 'login' ? 'Đăng nhập nhanh để lưu và theo dõi đơn hàng của bạn.' : 'Tạo tài khoản demo để lưu và theo dõi đơn hàng.'}
+        </p>
 
+        {mode === 'register' && (
+          <label className={labelClass}>
+            Họ tên
+            <input
+              autoFocus
+              className={inputClass}
+              onChange={(event) => {
+                setName(event.target.value)
+                setError('')
+              }}
+              placeholder="Nguyễn Văn A"
+              type="text"
+              value={name}
+            />
+          </label>
+        )}
         <label className={labelClass}>
           Email
           <input
-            autoFocus
+            autoFocus={mode === 'login'}
             className={inputClass}
             onChange={(event) => {
               setEmail(event.target.value)
@@ -90,6 +140,21 @@ function AuthDialogContent() {
             value={password}
           />
         </label>
+        {mode === 'register' && (
+          <label className={labelClass}>
+            Nhập lại mật khẩu
+            <input
+              className={inputClass}
+              onChange={(event) => {
+                setConfirmPassword(event.target.value)
+                setError('')
+              }}
+              placeholder="Nhập lại mật khẩu"
+              type="password"
+              value={confirmPassword}
+            />
+          </label>
+        )}
 
         {error && (
           <p className="mt-2.5 text-xs text-danger" role="alert">
@@ -98,7 +163,7 @@ function AuthDialogContent() {
         )}
 
         <Button className="mt-5 w-full" type="submit">
-          Đăng nhập & tiếp tục <ArrowRightIcon />
+          {mode === 'login' ? 'Đăng nhập & tiếp tục' : 'Tạo tài khoản'} <ArrowRightIcon />
         </Button>
         <small className="mt-3.5 block text-center text-[11px] text-muted">
           Đây là tài khoản demo. BrewLite không lưu mật khẩu của bạn.
