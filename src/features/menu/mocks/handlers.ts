@@ -7,14 +7,20 @@ import type { Product } from '../types'
 let mockProducts: Product[] = [...MOCK_PRODUCTS]
 
 export const menuHandlers = [
-  // GET /products - Lấy danh sách món đang bán
-  http.get(getApiUrl('/products'), async () => {
+  // GET /products - Lấy danh sách món đang bán (hoặc tất cả nếu all=true)
+  http.get(getApiUrl('/products'), async ({ request }) => {
     await delay(200)
-    return HttpResponse.json(mockProducts.filter((product) => product.available !== false))
+    const url = new URL(request.url)
+    const showAll = url.searchParams.get('all') === 'true'
+    const list = showAll ? mockProducts : mockProducts.filter((product) => product.available !== false)
+    return HttpResponse.json(list)
   }),
-  http.get('/products', async () => {
+  http.get('/products', async ({ request }) => {
     await delay(200)
-    return HttpResponse.json(mockProducts.filter((product) => product.available !== false))
+    const url = new URL(request.url)
+    const showAll = url.searchParams.get('all') === 'true'
+    const list = showAll ? mockProducts : mockProducts.filter((product) => product.available !== false)
+    return HttpResponse.json(list)
   }),
 
   // GET /products/:id - Lấy chi tiết món

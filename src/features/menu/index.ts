@@ -8,10 +8,17 @@ export { ToppingOptions } from './components/topping-options'
 // API & Hooks
 export {
   fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
   productsActions,
   productsQueryOptions,
   useProducts,
+  useAdminProducts,
   useAllProducts,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
 } from './api'
 
 // Constants & Types & Utils

@@ -5,8 +5,10 @@ export { StatusPill } from './components/status-pill'
 export { OrderTicket } from './components/order-ticket'
 export { OrderHistoryCard } from './components/order-history-card'
 
-// Store & Hooks
-export { ordersActions, useOrders, useOrder } from './orders.store'
+// Store & Hooks & API
+export { ordersActions } from './orders.store'
+export { useOrders, useOrder, useUpdateOrderStatus } from './hooks'
+export { fetchOrders, fetchOrderById, updateOrderStatus, ordersQueryOptions, orderQueryOptions } from './api'
 
 // Constants & Types
 export * from './constants'

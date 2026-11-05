@@ -7,7 +7,8 @@ const ordersStore = createStore<Order[]>([], {
 })
 
 export const ordersActions = {
-  add: (order: Order) => ordersStore.setState((orders) => [...orders, order]),
+  add: (order: Order) => ordersStore.setState((orders) => [order, ...orders.filter((o) => o.id !== order.id)]),
+  setAll: (orders: Order[]) => ordersStore.setState(orders),
   updateStatus: (id: string, status: OrderStatus): boolean => {
     const order = ordersStore.getState().find((item) => item.id === id)
     if (!order) return false
