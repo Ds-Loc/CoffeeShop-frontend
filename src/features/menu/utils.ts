@@ -1,14 +1,20 @@
 import { ALL_CATEGORIES, type CategoryFilter } from './constants'
 import type { Product } from './types'
 
-const normalize = (text: string) => text.trim().toLocaleLowerCase('vi')
+const normalize = (text: string) =>
+  text
+    .trim()
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
 
 export const filterProducts = (products: Product[], category: CategoryFilter, query: string): Product[] => {
   const keyword = normalize(query)
 
   return products.filter((product) => {
     const matchesCategory = category === ALL_CATEGORIES || product.category === category
-    const matchesQuery = normalize(`${product.name} ${product.description}`).includes(keyword)
+    const matchesQuery = normalize(product.name).includes(keyword)
     return matchesCategory && matchesQuery
   })
 }

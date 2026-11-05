@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { SearchIcon } from '@/components/icons/icon'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -6,21 +7,30 @@ import { Eyebrow } from '@/components/ui/eyebrow'
 import { useProducts } from '../api'
 import { ALL_CATEGORIES, CATEGORY_FILTERS, type CategoryFilter } from '../constants'
 import type { Product } from '../types'
-import { filterProducts } from '../utils'
 import { ProductCard } from './product-card'
 import { ProductCustomizer } from './product-customizer'
 
 export function MenuSection() {
-  const { data: products = [], isPending, isError, refetch } = useProducts()
-  const [category, setCategory] = useState<CategoryFilter>(ALL_CATEGORIES)
-  const [query, setQuery] = useState('')
+  const { category: selectedCategory, q } = useSearch({ from: '/' })
+  const navigate = useNavigate({ from: '/' })
+  const category: CategoryFilter = selectedCategory ?? ALL_CATEGORIES
+  const query = q ?? ''
+  const { data: filteredProducts = [], isPending, isError, refetch } = useProducts(category, query)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
-  const filteredProducts = filterProducts(products, category, query)
+  const updateSearch = (updates: { category?: CategoryFilter; q?: string }) =>
+    navigate({
+      search: (previous) => ({
+        ...previous,
+        category: updates.category === ALL_CATEGORIES ? undefined : updates.category ?? previous.category,
+        q: updates.q === undefined ? previous.q : updates.q || undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    })
 
   const resetFilters = () => {
-    setQuery('')
-    setCategory(ALL_CATEGORIES)
+    void updateSearch({ category: ALL_CATEGORIES, q: '' })
   }
 
   return (
@@ -35,7 +45,7 @@ export function MenuSection() {
           <input
             aria-label="Tìm kiếm đồ uống"
             className="w-full bg-transparent text-[13px] text-ink outline-0 placeholder:text-stone-400"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => void updateSearch({ q: event.target.value })}
             placeholder="Tìm món bạn thích..."
             value={query}
           />
@@ -48,7 +58,7 @@ export function MenuSection() {
             aria-selected={category === item}
             className="min-h-10 rounded-full border border-line px-[18px] text-[13px] font-semibold whitespace-nowrap text-stone-500 transition-colors aria-selected:border-forest aria-selected:bg-forest aria-selected:text-white"
             key={item}
-            onClick={() => setCategory(item)}
+            onClick={() => void updateSearch({ category: item })}
             role="tab"
             type="button"
           >
@@ -57,7 +67,9 @@ export function MenuSection() {
         ))}
       </div>
 
-      {isPending && <p className="py-20 text-center text-sm text-muted">Đang tải thực đơn...</p>}
+      {isPending && filteredProducts.length === 0 && (
+        <p className="py-20 text-center text-sm text-muted">Đang tải thực đơn...</p>
+      )}
 
       {isError && (
         <EmptyState
@@ -68,7 +80,7 @@ export function MenuSection() {
         />
       )}
 
-      {!isPending && !isError && filteredProducts.length > 0 && (
+      {!isError && filteredProducts.length > 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} onSelect={setSelectedProduct} product={product} />

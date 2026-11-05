@@ -2,6 +2,8 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { axiosClient } from '@/lib/axios'
 import { createStore, useStore } from '@/lib/store'
 import { MOCK_PRODUCTS } from './data/mock-products'
+import { ALL_CATEGORIES, type CategoryFilter } from './constants'
+import { filterProducts } from './utils'
 import type { Product } from './types'
 
 const productsStore = createStore<Product[]>(MOCK_PRODUCTS, {
@@ -90,10 +92,19 @@ export const productsQueryOptions = (options?: FetchProductsOptions) =>
   })
 
 /** Hook lấy danh sách món đang bán cho khách */
-export const useProducts = () => {
-  const query = useQuery(productsQueryOptions())
+export const useProducts = (category: CategoryFilter = ALL_CATEGORIES, search = '') => {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: ['products', { category, search }],
+    queryFn: async () =>
+      filterProducts(
+        await queryClient.fetchQuery({ ...productsQueryOptions(), staleTime: 30_000 }),
+        category,
+        search,
+      ),
+  })
   const localProducts = useStore(productsStore)
-  const data = query.data ?? localProducts.filter((product) => product.available !== false)
+  const data = query.data ?? filterProducts(localProducts.filter((product) => product.available !== false), category, search)
   return { ...query, data }
 }
 

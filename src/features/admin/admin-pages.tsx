@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { CartIcon } from '@/components/icons/icon'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -227,9 +227,22 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
 
 export function AdminOrdersPage() {
   const { data: orders = [], isPending } = useOrders()
-  const [filter, setFilter] = useState<typeof statuses[number]>('ALL')
-  const [query, setQuery] = useState('')
+  const { status: selectedStatus, q } = useSearch({ from: '/admin/orders' })
+  const navigate = useNavigate({ from: '/admin/orders' })
+  const filter: typeof statuses[number] = selectedStatus ?? 'ALL'
+  const query = q ?? ''
   const [selected, setSelected] = useState<Order | null>(null)
+
+  const updateOrderSearch = (updates: { status?: typeof statuses[number]; q?: string }) =>
+    navigate({
+      search: (previous) => ({
+        ...previous,
+        status: updates.status === 'ALL' ? undefined : updates.status ?? previous.status,
+        q: updates.q === undefined ? previous.q : updates.q || undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    })
 
   // Giữ selected order đồng bộ với dữ liệu mới nhất từ query cache
   const activeSelected = useMemo(() => {
@@ -248,8 +261,9 @@ export function AdminOrdersPage() {
         <input
           aria-label="Tìm mã đơn"
           className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm outline-0 focus:border-forest"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => void updateOrderSearch({ q: event.target.value })}
           placeholder="Tìm mã đơn..."
+          value={query}
         />
         <div className="flex gap-2 overflow-x-auto">
           {statuses.map((status) => (
@@ -257,7 +271,7 @@ export function AdminOrdersPage() {
               className="rounded-full border border-line px-3 py-2 text-[11px] font-bold whitespace-nowrap aria-selected:bg-forest aria-selected:text-white"
               key={status}
               aria-selected={filter === status}
-              onClick={() => setFilter(status)}
+              onClick={() => void updateOrderSearch({ status })}
               type="button"
             >
               {status === 'ALL' ? 'Tất cả' : ORDER_STATUS_LABEL[status]}
