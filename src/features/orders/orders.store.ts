@@ -28,6 +28,17 @@ export const ordersActions = {
   add: (order: Order) =>
     ordersHistoryStore.setState((orders) => [...orders, order]),
 
+  getById: (id: string) =>
+    ordersHistoryStore.getState().present.find((item) => item.id === id),
+
+  setStatus: (id: string, status: OrderStatus): boolean => {
+    if (!ordersHistoryStore.getState().present.some((item) => item.id === id)) return false
+    ordersHistoryStore.setState((orders) =>
+      orders.map((item) => (item.id === id ? { ...item, status } : item)),
+    )
+    return true
+  },
+
   updateStatus: (id: string, status: OrderStatus): boolean => {
     const order = ordersHistoryStore.getState().present.find((item) => item.id === id)
     if (!order) return false

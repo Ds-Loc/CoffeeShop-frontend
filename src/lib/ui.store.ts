@@ -2,6 +2,7 @@ import { createStore, useStore } from '@/lib/store'
 
 interface ToastData {
   message: string
+  variant?: 'success' | 'error'
   /** Nhãn nút action (vd: "Hoàn tác"). Nếu có thì hiển thị nút bên phải toast. */
   actionLabel?: string
   onAction?: () => void
@@ -48,7 +49,12 @@ export const uiActions = {
 
   /** Toast đơn giản (không có action). */
   showToast: (message: string) => {
-    uiStore.setState((state) => ({ ...state, toast: { message } }))
+    uiStore.setState((state) => ({ ...state, toast: { message, variant: 'success' } }))
+    scheduleToastDismiss()
+  },
+
+  showErrorToast: (message: string) => {
+    uiStore.setState((state) => ({ ...state, toast: { message, variant: 'error' } }))
     scheduleToastDismiss()
   },
 
@@ -58,6 +64,7 @@ export const uiActions = {
       ...state,
       toast: {
         message,
+        variant: 'success',
         actionLabel,
         onAction: () => {
           onAction()

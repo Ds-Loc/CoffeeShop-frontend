@@ -4,14 +4,15 @@ import { uiActions, useToast } from '@/lib/ui.store'
 export function Toast() {
   const toast = useToast()
   if (!toast) return null
+  const isError = toast.variant === 'error'
 
   return (
     <div
-      className="fixed right-3.5 bottom-3.5 left-3.5 z-150 flex animate-toast-in items-center gap-2.5 rounded-full bg-forest-dark py-3 pr-2 pl-3 text-xs font-bold text-white shadow-2xl sm:right-6 sm:bottom-6 sm:left-auto"
-      role="status"
+      className={`fixed right-3.5 bottom-3.5 left-3.5 z-150 flex animate-toast-in items-center gap-2.5 rounded-full py-3 pr-2 pl-3 text-xs font-bold text-white shadow-2xl sm:right-6 sm:bottom-6 sm:left-auto ${isError ? 'bg-[#8f342d]' : 'bg-forest-dark'}`}
+      role={isError ? 'alert' : 'status'}
     >
-      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-lime text-forest">
-        <CheckIcon size={16} />
+      <span className={`grid size-6 shrink-0 place-items-center rounded-full ${isError ? 'bg-white/15 text-white' : 'bg-lime text-forest'}`}>
+        {isError ? '!' : <CheckIcon size={16} />}
       </span>
       <span className="flex-1">{toast.message}</span>
       {toast.actionLabel && toast.onAction && (

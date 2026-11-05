@@ -8,7 +8,8 @@ import { Eyebrow } from '@/components/ui/eyebrow'
 import { Overlay } from '@/components/ui/overlay'
 import { StatusPill } from '@/features/orders/components/status-pill'
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/features/orders/constants'
-import { ordersActions, useOrders } from '@/features/orders/orders.store'
+import { updateOrderStatus } from '@/features/orders/api'
+import { useOrders } from '@/features/orders/orders.store'
 import type { Order, OrderStatus } from '@/features/orders/types'
 import { formatDateTime, formatVnd } from '@/lib/format'
 import { productsActions, useAllProducts } from '@/features/menu/api'
@@ -49,31 +50,46 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
   const handleAdvance = () => {
     const next = nextStatus[order.status]
     if (!next) return
-    ordersActions.advanceStatus(order.id)
+    const previous = order.status
     onClose()
-    uiActions.showToastWithAction(
-      `Đơn #${order.id} → ${ORDER_STATUS_LABEL[next]}`,
-      'Hoàn tác',
-      () => ordersActions.rollbackStatus(order.id),
-    )
+    void updateOrderStatus(order.id, next).then((success) => {
+      if (!success) return
+      uiActions.showToastWithAction(
+        `Đơn #${order.id} → ${ORDER_STATUS_LABEL[next]}`,
+        'Hoàn tác',
+        () => {
+          void updateOrderStatus(order.id, previous).then((rolledBack) => {
+            if (rolledBack) uiActions.showToast(`Đã hoàn tác về ${ORDER_STATUS_LABEL[previous]}.`)
+          })
+        },
+      )
+    })
   }
 
   const handleRollback = () => {
     const prev = prevStatus[order.status]
     if (!prev) return
-    ordersActions.rollbackStatus(order.id)
+    const previous = order.status
     onClose()
-    uiActions.showToastWithAction(
-      `Đã hoàn tác về ${ORDER_STATUS_LABEL[prev]}`,
-      'Làm lại',
-      () => ordersActions.advanceStatus(order.id),
-    )
+    void updateOrderStatus(order.id, prev).then((success) => {
+      if (!success) return
+      uiActions.showToastWithAction(
+        `Đã hoàn tác về ${ORDER_STATUS_LABEL[prev]}`,
+        'Làm lại',
+        () => {
+          void updateOrderStatus(order.id, previous).then((redone) => {
+            if (redone) uiActions.showToast(`Đã chuyển lại sang ${ORDER_STATUS_LABEL[previous]}.`)
+          })
+        },
+      )
+    })
   }
 
   const handleCancel = () => {
-    ordersActions.updateStatus(order.id, 'CANCELLED')
     onClose()
-    uiActions.showToast(`Đơn #${order.id} đã bị huỷ.`)
+    void updateOrderStatus(order.id, 'CANCELLED').then((success) => {
+      if (success) uiActions.showToast(`Đơn #${order.id} đã bị huỷ.`)
+    })
   }
 
   return (
