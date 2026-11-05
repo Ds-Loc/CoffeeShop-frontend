@@ -32,6 +32,15 @@ function CartDrawerContent() {
     }
   }
 
+  const handleRemoveItem = (key: string, name: string) => {
+    cartActions.removeItem(key)
+    uiActions.showToastWithAction(
+      `Đã xoá "${name}"`,
+      'Hoàn tác',
+      () => cartActions.undo(),
+    )
+  }
+
   return (
     <Overlay onClose={uiActions.closeCart} placement="end">
       <aside aria-label="Giỏ hàng" className="flex h-full w-[min(470px,100%)] animate-drawer-in flex-col bg-paper shadow-2xl">
@@ -83,7 +92,7 @@ function CartDrawerContent() {
                       />
                       <button
                         className="text-[11px] text-[#9a5e4e] underline"
-                        onClick={() => cartActions.removeItem(item.key)}
+                        onClick={() => handleRemoveItem(item.key, item.productName)}
                         type="button"
                       >
                         Xóa

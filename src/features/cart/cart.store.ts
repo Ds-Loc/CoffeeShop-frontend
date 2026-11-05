@@ -1,7 +1,8 @@
-import { createStore, useStore } from '@/lib/store'
+import { createHistoryStore, useCanRedo, useCanUndo, useHistoryPresent } from '@/lib/history-store'
+import { useStore } from '@/lib/store'
 import type { CartItem } from './types'
 
-const cartStore = createStore<CartItem[]>([], {
+const cartHistoryStore = createHistoryStore<CartItem[]>([], {
   storageKey: 'brewlite:cart',
   validate: (value): value is CartItem[] => Array.isArray(value),
 })
@@ -9,7 +10,7 @@ const cartStore = createStore<CartItem[]>([], {
 export const cartActions = {
   /** Thêm món; nếu cùng cấu hình đã có trong giỏ thì cộng dồn số lượng. */
   addItem: (item: CartItem) =>
-    cartStore.setState((items) =>
+    cartHistoryStore.setState((items) =>
       items.some((existing) => existing.key === item.key)
         ? items.map((existing) =>
             existing.key === item.key ? { ...existing, quantity: existing.quantity + item.quantity } : existing,
@@ -17,13 +18,18 @@ export const cartActions = {
         : [...items, item],
     ),
   setQuantity: (key: string, quantity: number) =>
-    cartStore.setState((items) =>
+    cartHistoryStore.setState((items) =>
       items.map((item) => (item.key === key ? { ...item, quantity: Math.max(1, quantity) } : item)),
     ),
-  removeItem: (key: string) => cartStore.setState((items) => items.filter((item) => item.key !== key)),
-  clear: () => cartStore.setState([]),
+  removeItem: (key: string) =>
+    cartHistoryStore.setState((items) => items.filter((item) => item.key !== key)),
+  clear: () => cartHistoryStore.setState([]),
+  undo: () => cartHistoryStore.undo(),
+  redo: () => cartHistoryStore.redo(),
 }
 
-export const getCartItems = () => cartStore.getState()
+export const getCartItems = () => cartHistoryStore.getState().present
 
-export const useCartItems = () => useStore(cartStore)
+export const useCartItems = () => useHistoryPresent(cartHistoryStore)
+export const useCartCanUndo = () => useCanUndo(cartHistoryStore)
+export const useCartCanRedo = () => useCanRedo(cartHistoryStore)
