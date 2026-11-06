@@ -4,13 +4,21 @@ import { buttonClass } from '@/components/ui/button-styles'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { OrderTicket } from './components/order-ticket'
-import { useOrder } from './orders.store'
+import { useOrder } from './hooks'
 
 const orderRoute = getRouteApi('/orders/$orderId')
 
 export function OrderConfirmationPage() {
   const { orderId } = orderRoute.useParams()
-  const order = useOrder(orderId)
+  const { data: order, isPending } = useOrder(orderId)
+
+  if (isPending) {
+    return (
+      <main className="shell py-20 text-center">
+        <p className="text-sm text-muted">Đang tải thông tin đơn hàng #{orderId}...</p>
+      </main>
+    )
+  }
 
   if (!order) {
     return (

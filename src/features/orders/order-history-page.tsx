@@ -4,10 +4,10 @@ import { buttonClass } from '@/components/ui/button-styles'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { OrderHistoryCard } from './components/order-history-card'
-import { useOrders } from './orders.store'
+import { useOrders } from './hooks'
 
 export function OrderHistoryPage() {
-  const orders = useOrders()
+  const { data: orders = [], isPending } = useOrders()
   const latestFirst = [...orders].reverse()
 
   return (
@@ -22,7 +22,9 @@ export function OrderHistoryPage() {
         <p className="text-[13px] text-muted">Xem lại những món bạn đã yêu thích.</p>
       </div>
 
-      {latestFirst.length > 0 ? (
+      {isPending ? (
+        <p className="py-20 text-center text-sm text-muted">Đang tải lịch sử đơn hàng...</p>
+      ) : latestFirst.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           {latestFirst.map((order) => (
             <OrderHistoryCard key={order.id} order={order} />

@@ -12,7 +12,12 @@ import { updateOrderStatus } from '@/features/orders/api'
 import { useOrders } from '@/features/orders/orders.store'
 import type { Order, OrderStatus } from '@/features/orders/types'
 import { formatDateTime, formatVnd } from '@/lib/format'
-import { productsActions, useAllProducts } from '@/features/menu/api'
+import {
+  useAdminProducts,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+} from '@/features/menu'
 import type { Product } from '@/features/menu/types'
 import { uiActions } from '@/lib/ui.store'
 import { getOrderStats } from './overview/stats'
@@ -21,23 +26,74 @@ const card = 'rounded-[20px] border border-line bg-paper p-5'
 const statuses: Array<'ALL' | OrderStatus> = ['ALL', 'PAID', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED']
 
 function PageTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
-  return <div className="mb-7"><Eyebrow>{eyebrow}</Eyebrow><h1 className="mt-2 font-display text-4xl tracking-tight sm:text-5xl">{title}</h1><p className="mt-2 text-sm text-muted">{description}</p></div>
+  return (
+    <div className="mb-7">
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <h1 className="mt-2 font-display text-4xl tracking-tight sm:text-5xl">{title}</h1>
+      <p className="mt-2 text-sm text-muted">{description}</p>
+    </div>
+  )
 }
 
 export function AdminOverviewPage() {
-  const orders = useOrders()
+  const { data: orders = [], isPending } = useOrders()
   const stats = getOrderStats(orders)
-  const cards = [['Doanh thu hôm nay', formatVnd(stats.revenue)], ['Đơn hôm nay', String(stats.orderCount)], ['Đang xử lý', String(stats.activeCount)], ['Giá trị đơn TB', formatVnd(stats.average)]]
+  const cards = [
+    ['Doanh thu hôm nay', formatVnd(stats.revenue)],
+    ['Đơn hôm nay', String(stats.orderCount)],
+    ['Đang xử lý', String(stats.activeCount)],
+    ['Giá trị đơn TB', formatVnd(stats.average)],
+  ]
+
+  if (isPending) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-sm text-muted">Đang tải dữ liệu tổng quan...</p>
+      </div>
+    )
+  }
+
   return (
-    <><PageTitle description="Theo dõi nhanh tình hình vận hành trong ngày." eyebrow="Tổng quan" title="Chào mừng trở lại" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value]) => <div className={card} key={label}><p className="text-xs text-muted">{label}</p><strong className="mt-3 block font-display text-2xl">{value}</strong></div>)}</div>
+    <>
+      <PageTitle description="Theo dõi nhanh tình hình vận hành trong ngày." eyebrow="Tổng quan" title="Chào mừng trở lại" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map(([label, value]) => (
+          <div className={card} key={label}>
+            <p className="text-xs text-muted">{label}</p>
+            <strong className="mt-3 block font-display text-2xl">{value}</strong>
+          </div>
+        ))}
+      </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <section className={card}><div className="mb-5 flex items-center justify-between"><h2 className="font-display text-xl">Doanh thu 7 ngày</h2><span className="text-[11px] text-muted">VND</span></div>
           {orders.length === 0 ? <EmptyState icon={<CartIcon size={24} />} description="Số liệu sẽ xuất hiện khi có đơn hàng." title="Chưa có dữ liệu" /> : <div className="flex h-48 items-end gap-2 border-b border-line pb-1">{stats.revenueByDay.map((day) => { const max = Math.max(...stats.revenueByDay.map((item) => item.value), 1); return <div className="flex h-full flex-1 flex-col items-center justify-end gap-2" key={day.label}><span className="text-[10px] text-muted">{day.value ? formatVnd(day.value).replace(' ₫', '') : '0'}</span><div aria-label={`${day.label}: ${formatVnd(day.value)}`} className="w-full rounded-t-lg bg-forest transition-all hover:bg-caramel" style={{ height: `${Math.max((day.value / max) * 70, day.value ? 8 : 2)}%` }} /><span className="text-[11px] text-muted">{day.label}</span></div> })}</div>}
         </section>
-        <section className={card}><h2 className="font-display text-xl">Món bán chạy</h2>{stats.topProducts.length ? <ol className="mt-4 space-y-3">{stats.topProducts.map(([name, count], index) => <li className="flex items-center justify-between border-b border-line pb-3 text-sm" key={name}><span><b className="mr-2 text-muted">{index + 1}</b>{name}</span><strong>{count}</strong></li>)}</ol> : <p className="mt-5 text-sm text-muted">Chưa có đơn hàng.</p>}</section>
       </div>
-      <section className={`${card} mt-5`}><div className="flex items-center justify-between"><h2 className="font-display text-xl">Đơn gần đây</h2><Link className="text-xs font-bold text-forest" to="/admin/orders">Xem tất cả →</Link></div>{orders.length ? <div className="mt-4 space-y-2">{[...orders].reverse().slice(0, 5).map((order) => <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-3 text-sm" key={order.id}><span className="font-bold">#{order.id}</span><span className="text-muted">{formatDateTime(order.createdAt)}</span><StatusPill status={order.status} /><strong>{formatVnd(order.total)}</strong></div>)}</div> : <p className="mt-4 text-sm text-muted">Chưa có đơn hàng gần đây.</p>}</section>
+      <section className={`${card} mt-5`}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl">Đơn gần đây</h2>
+          <Link className="text-xs font-bold text-forest" to="/admin/orders">
+            Xem tất cả →
+          </Link>
+        </div>
+        {orders.length ? (
+          <div className="mt-4 space-y-2">
+            {[...orders]
+              .reverse()
+              .slice(0, 5)
+              .map((order) => (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-3 text-sm" key={order.id}>
+                  <span className="font-bold">#{order.id}</span>
+                  <span className="text-muted">{formatDateTime(order.createdAt)}</span>
+                  <StatusPill status={order.status} />
+                  <strong>{formatVnd(order.total)}</strong>
+                </div>
+              ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted">Chưa có đơn hàng gần đây.</p>
+        )}
+      </section>
     </>
   )
 }
@@ -298,7 +354,65 @@ export function AdminMenuPage() {
 }
 
 export function AdminCustomersPage() {
-  const orders = useOrders(); const [query, setQuery] = useState('')
-  const customers = useMemo(() => [...new Map(orders.filter((order) => order.customerEmail).map((order) => [order.customerEmail, order])).values()].map((latest) => { const customerOrders = orders.filter((order) => order.customerEmail === latest.customerEmail); return { ...latest, count: customerOrders.length, spent: customerOrders.reduce((sum, order) => sum + order.total, 0) } }).filter((customer) => `${customer.customerName} ${customer.customerEmail}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => b.spent - a.spent), [orders, query])
-  return <><PageTitle description="Khách hàng được tổng hợp từ các đơn online." eyebrow="Quan hệ khách hàng" title="Khách hàng" /><input aria-label="Tìm khách hàng" className="min-h-11 w-full max-w-md rounded-full border border-line bg-paper px-4 text-sm outline-0 focus:border-forest" onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo tên hoặc email..." />{customers.length ? <div className={`${card} mt-5 overflow-x-auto p-0`}><table className="w-full min-w-[600px] text-left text-xs"><thead className="border-b border-line text-muted"><tr><th className="p-4">Khách hàng</th><th>Số đơn</th><th>Tổng chi tiêu</th><th>Đơn gần nhất</th></tr></thead><tbody>{customers.map((customer) => <tr className="border-b border-line last:border-0" key={customer.customerEmail}><td className="p-4"><strong>{customer.customerName}</strong><span className="block text-muted">{customer.customerEmail}</span></td><td>{customer.count}</td><td>{formatVnd(customer.spent)}</td><td>{formatDateTime(customer.createdAt)}</td></tr>)}</tbody></table></div> : <div className="mt-5"><EmptyState icon={<CartIcon size={24} />} description="Khách online sẽ xuất hiện sau khi có đơn." title="Chưa có khách hàng" /></div>}</>
+  const { data: orders = [], isPending } = useOrders()
+  const [query, setQuery] = useState('')
+
+  const customers = useMemo(() => {
+    return [...new Map(orders.filter((order) => order.customerEmail).map((order) => [order.customerEmail, order])).values()]
+      .map((latest) => {
+        const customerOrders = orders.filter((order) => order.customerEmail === latest.customerEmail)
+        return {
+          ...latest,
+          count: customerOrders.length,
+          spent: customerOrders.reduce((sum, order) => sum + order.total, 0),
+        }
+      })
+      .filter((customer) => `${customer.customerName} ${customer.customerEmail}`.toLowerCase().includes(query.toLowerCase()))
+      .sort((a, b) => b.spent - a.spent)
+  }, [orders, query])
+
+  return (
+    <>
+      <PageTitle description="Khách hàng được tổng hợp từ các đơn online." eyebrow="Quan hệ khách hàng" title="Khách hàng" />
+      <input
+        aria-label="Tìm khách hàng"
+        className="min-h-11 w-full max-w-md rounded-full border border-line bg-paper px-4 text-sm outline-0 focus:border-forest"
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Tìm theo tên hoặc email..."
+      />
+      {isPending ? (
+        <p className="py-20 text-center text-sm text-muted">Đang tải danh sách khách hàng...</p>
+      ) : customers.length ? (
+        <div className={`${card} mt-5 overflow-x-auto p-0`}>
+          <table className="w-full min-w-[600px] text-left text-xs">
+            <thead className="border-b border-line text-muted">
+              <tr>
+                <th className="p-4">Khách hàng</th>
+                <th>Số đơn</th>
+                <th>Tổng chi tiêu</th>
+                <th>Đơn gần nhất</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map((customer) => (
+                <tr className="border-b border-line last:border-0" key={customer.customerEmail}>
+                  <td className="p-4">
+                    <strong>{customer.customerName}</strong>
+                    <span className="block text-muted">{customer.customerEmail}</span>
+                  </td>
+                  <td>{customer.count}</td>
+                  <td>{formatVnd(customer.spent)}</td>
+                  <td>{formatDateTime(customer.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="mt-5">
+          <EmptyState icon={<CartIcon size={24} />} description="Khách online sẽ xuất hiện sau khi có đơn." title="Chưa có khách hàng" />
+        </div>
+      )}
+    </>
+  )
 }

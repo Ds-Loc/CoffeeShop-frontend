@@ -1,54 +1,92 @@
 import axios from 'axios'
+import { queryOptions } from '@tanstack/react-query'
 import { axiosClient } from '@/lib/axios'
 import { uiActions } from '@/lib/ui.store'
-import { ORDER_STATUS_LABEL } from './constants'
 import { ordersActions } from './orders.store'
-import type { OrderStatus } from './types'
+import type { Order, OrderStatus } from './types'
 
-const pendingUpdates = new Set<string>()
+const pendingStatusUpdates = new Set<string>()
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === 'string' && error.trim()) return error
+
   if (axios.isAxiosError(error) && !error.response) {
     return 'Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.'
   }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = error.message
-    if (typeof message === 'string' && message.trim()) return message
+
+  if (typeof error === 'object' && error !== null) {
+    if ('message' in error && typeof error.message === 'string' && error.message.trim()) {
+      return error.message
+    }
+    if ('error' in error && typeof error.error === 'string' && error.error.trim()) {
+      return error.error
+    }
   }
-  if (typeof error === 'object' && error !== null && 'error' in error) {
-    const message = error.error
-    if (typeof message === 'string' && message.trim()) return message
-  }
+
   return 'Vui lòng thử lại.'
 }
 
-export const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<boolean> => {
-  if (pendingUpdates.has(orderId)) {
-    uiActions.showErrorToast(`Đơn #${orderId} đang được cập nhật. Vui lòng thử lại.`)
-    return false
+export const fetchOrders = async (): Promise<Order[]> => {
+  const orders = await axiosClient.get<Order[], Order[]>('/orders')
+  if (!Array.isArray(orders)) {
+    throw new Error('Dữ liệu danh sách đơn hàng không hợp lệ.')
   }
 
-  const order = ordersActions.getById(orderId)
-  if (!order) {
-    uiActions.showErrorToast(`Không tìm thấy đơn #${orderId}.`)
-    return false
-  }
-  if (order.status === status) return true
+  ordersActions.setAll(orders)
+  return orders
+}
 
-  pendingUpdates.add(orderId)
-  ordersActions.setStatus(orderId, status)
+export const fetchOrderById = (orderId: string): Promise<Order> =>
+  axiosClient.get<Order, Order>(`/orders/${encodeURIComponent(orderId)}`)
+
+export const updateOrderStatus = async ({
+  id,
+  status,
+}: {
+  id: string
+  status: OrderStatus
+}): Promise<Order | null> => {
+  if (pendingStatusUpdates.has(id)) {
+    uiActions.showErrorToast(`Đơn #${id} đang được cập nhật. Vui lòng thử lại.`)
+    return null
+  }
+
+  const previousOrder = ordersActions.getById(id)
+  if (!previousOrder) {
+    uiActions.showErrorToast(`Không tìm thấy đơn #${id}.`)
+    return null
+  }
+  if (previousOrder.status === status) return previousOrder
+
+  pendingStatusUpdates.add(id)
+  ordersActions.setStatus(id, status)
 
   try {
-    await axiosClient.patch(`/orders/${encodeURIComponent(orderId)}/status`, { status })
-    return true
-  } catch (error) {
-    ordersActions.setStatus(orderId, order.status)
-    uiActions.showErrorToast(
-      `Không thể cập nhật đơn #${orderId} (${ORDER_STATUS_LABEL[status]}): ${getErrorMessage(error)}`,
+    const updatedOrder = await axiosClient.patch<Order, Order>(
+      `/orders/${encodeURIComponent(id)}/status`,
+      { status },
     )
-    return false
+    ordersActions.setStatus(id, updatedOrder.status)
+    return updatedOrder
+  } catch (error) {
+    ordersActions.setStatus(id, previousOrder.status)
+    uiActions.showErrorToast(
+      `Không thể cập nhật đơn #${id}: ${getErrorMessage(error)}`,
+    )
+    return null
   } finally {
-    pendingUpdates.delete(orderId)
+    pendingStatusUpdates.delete(id)
   }
 }
+
+export const ordersQueryOptions = queryOptions({
+  queryKey: ['orders'],
+  queryFn: fetchOrders,
+})
+
+export const orderQueryOptions = (orderId: string) =>
+  queryOptions({
+    queryKey: ['orders', orderId],
+    queryFn: () => fetchOrderById(orderId),
+    enabled: Boolean(orderId),
+  })
