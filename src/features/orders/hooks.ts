@@ -9,28 +9,13 @@ import {
 } from './api'
 import type { Order, OrderStatus } from './types'
 
-/**
- * Hook truy vấn danh sách đơn hàng qua TanStack Query (Server State)
- */
-export const useOrders = () => {
-  return useQuery({
-    ...ordersQueryOptions,
-  })
-}
+/** Hook truy vấn danh sách đơn hàng qua TanStack Query (Server State). */
+export const useOrders = () => useQuery(ordersQueryOptions)
 
-/**
- * Hook truy vấn chi tiết một đơn hàng theo ID
- */
-export const useOrder = (orderId: string) => {
-  return useQuery({
-    ...orderQueryOptions(orderId),
-  })
-}
+/** Hook truy vấn chi tiết một đơn hàng theo ID. */
+export const useOrder = (orderId: string) => useQuery(orderQueryOptions(orderId))
 
-/**
- * Mutation: Cập nhật trạng thái đơn hàng (Dành cho Admin/Barista)
- * Tự động gọi queryClient.invalidateQueries({ queryKey: ['orders'] }) để cập nhật giao diện
- */
+/** Mutation đổi trạng thái đơn với cache update tức thì và rollback nếu thất bại. */
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient()
 
@@ -53,28 +38,19 @@ export const useUpdateOrderStatus = () => {
       return { id, previousOrders, previousOrder }
     },
     onError: (error, { id }, context) => {
-      if (context?.previousOrders) {
-        queryClient.setQueryData(ordersQueryKey, context.previousOrders)
-      }
-      if (context?.previousOrder) {
-        queryClient.setQueryData(orderQueryKey(id), context.previousOrder)
-      }
+      if (context?.previousOrders) queryClient.setQueryData(ordersQueryKey, context.previousOrders)
+      if (context?.previousOrder) queryClient.setQueryData(orderQueryKey(id), context.previousOrder)
 
       const message =
-        typeof error === 'object' && error !== null && 'message' in error &&
-        typeof error.message === 'string'
+        typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
           ? error.message
           : 'Vui lòng kiểm tra kết nối và thử lại.'
       uiActions.showErrorToast(`Không thể cập nhật đơn #${id}: ${message}`)
     },
     onSuccess: (updatedOrder, { id }, context) => {
       if (!updatedOrder) {
-        if (context?.previousOrders) {
-          queryClient.setQueryData(ordersQueryKey, context.previousOrders)
-        }
-        if (context?.previousOrder) {
-          queryClient.setQueryData(orderQueryKey(id), context.previousOrder)
-        }
+        if (context?.previousOrders) queryClient.setQueryData(ordersQueryKey, context.previousOrders)
+        if (context?.previousOrder) queryClient.setQueryData(orderQueryKey(id), context.previousOrder)
         return
       }
 

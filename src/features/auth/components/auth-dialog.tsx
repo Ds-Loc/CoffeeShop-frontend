@@ -50,11 +50,13 @@ function AuthDialogContent({ mode: initialMode, source }: AuthDialogContentProps
       role: email.trim().toLowerCase() === DEMO_ADMIN_EMAIL ? 'admin' : 'customer',
     })
     uiActions.closeAuth()
-    if (source === 'checkout') {
-      void navigate({ to: '/checkout' })
-    } else {
-      uiActions.showToast(mode === 'register' ? 'Tạo tài khoản thành công.' : 'Chào mừng bạn quay lại.')
-    }
+    const message = mode === 'register'
+      ? 'Tạo tài khoản thành công.'
+      : source === 'checkout'
+        ? 'Đăng nhập thành công.'
+        : 'Chào mừng bạn quay lại.'
+    uiActions.showToast(message)
+    void navigate({ to: '/' })
   }
 
   return (

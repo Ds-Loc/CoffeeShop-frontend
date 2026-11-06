@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { CartIcon } from '@/components/icons/icon'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -8,8 +8,7 @@ import { Eyebrow } from '@/components/ui/eyebrow'
 import { Overlay } from '@/components/ui/overlay'
 import { StatusPill } from '@/features/orders/components/status-pill'
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/features/orders/constants'
-import { updateOrderStatus } from '@/features/orders/api'
-import { useOrders } from '@/features/orders/hooks'
+import { useOrders, useUpdateOrderStatus } from '@/features/orders/hooks'
 import type { Order, OrderStatus } from '@/features/orders/types'
 import { formatDateTime, formatVnd } from '@/lib/format'
 import {
@@ -102,6 +101,7 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
   const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = { PAID: 'PREPARING', PREPARING: 'READY', READY: 'COMPLETED' }
   const prevStatus: Partial<Record<OrderStatus, OrderStatus>> = { PREPARING: 'PAID', READY: 'PREPARING', COMPLETED: 'READY' }
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus()
 
   const handleAdvance = () => {
     const next = nextStatus[order.status]
@@ -206,20 +206,53 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
 
 export function AdminOrdersPage() {
   const { data: orders = [] } = useOrders()
-  const [filter, setFilter] = useState<typeof statuses[number]>('ALL')
-  const [query, setQuery] = useState('')
+  const { status: selectedStatus, q } = useSearch({ from: '/admin/orders' })
+  const navigate = useNavigate({ from: '/admin/orders' })
+  const filter: typeof statuses[number] = selectedStatus ?? 'ALL'
+  const query = q ?? ''
   const [selected, setSelected] = useState<Order | null>(null)
-  const filtered = [...orders].reverse().filter((order) =>
-    (filter === 'ALL' || order.status === filter) && order.id.toLowerCase().includes(query.toLowerCase()),
-  )
+
+  const updateOrderSearch = (updates: { status?: typeof statuses[number]; q?: string }) =>
+    navigate({
+      search: (previous) => ({
+        ...previous,
+        status: updates.status === 'ALL' ? undefined : updates.status ?? previous.status,
+        q: updates.q === undefined ? previous.q : updates.q || undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    })
+
+  // Giữ selected order đồng bộ với dữ liệu mới nhất từ query cache
+  const activeSelected = useMemo(() => {
+    if (!selected) return null
+    return orders.find((o) => o.id === selected.id) ?? selected
+  }, [orders, selected])
+
+  const filtered = [...orders]
+    .reverse()
+    .filter((order) => (filter === 'ALL' || order.status === filter) && order.id.toLowerCase().includes(query.toLowerCase()))
+
   return (
     <>
       <PageTitle description="Theo dõi và cập nhật trạng thái đơn theo quy trình." eyebrow="Vận hành" title="Đơn hàng" />
       <div className="flex flex-col gap-3 sm:flex-row">
-        <input aria-label="Tìm mã đơn" className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm outline-0 focus:border-forest" onChange={(event) => setQuery(event.target.value)} placeholder="Tìm mã đơn..." />
+        <input
+          aria-label="Tìm mã đơn"
+          className="min-h-11 rounded-full border border-line bg-paper px-4 text-sm outline-0 focus:border-forest"
+          onChange={(event) => void updateOrderSearch({ q: event.target.value })}
+          placeholder="Tìm mã đơn..."
+          value={query}
+        />
         <div className="flex gap-2 overflow-x-auto">
           {statuses.map((status) => (
-            <button className="rounded-full border border-line px-3 py-2 text-[11px] font-bold whitespace-nowrap aria-selected:bg-forest aria-selected:text-white" key={status} aria-selected={filter === status} onClick={() => setFilter(status)} type="button">
+            <button
+              className="rounded-full border border-line px-3 py-2 text-[11px] font-bold whitespace-nowrap aria-selected:bg-forest aria-selected:text-white"
+              key={status}
+              aria-selected={filter === status}
+              onClick={() => void updateOrderSearch({ status })}
+              type="button"
+            >
               {status === 'ALL' ? 'Tất cả' : ORDER_STATUS_LABEL[status]}
             </button>
           ))}
@@ -246,7 +279,7 @@ export function AdminOrdersPage() {
           <div className="p-8"><EmptyState icon={<CartIcon size={24} />} description="Thử bộ lọc khác hoặc chờ đơn mới." title="Không có đơn phù hợp" /></div>
         )}
       </div>
-      {selected && <OrderDrawer onClose={() => setSelected(null)} order={selected} />}
+      {activeSelected && <OrderDrawer onClose={() => setSelected(null)} order={activeSelected} />}
     </>
   )
 }
