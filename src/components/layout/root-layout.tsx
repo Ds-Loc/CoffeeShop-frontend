@@ -15,6 +15,7 @@ export function RootLayout() {
     return (
       <div className="min-h-screen overflow-x-clip">
         <Outlet />
+        <Toast />
         {import.meta.env.DEV && <TanStackRouterDevtools />}
       </div>
     )
