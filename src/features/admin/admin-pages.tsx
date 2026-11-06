@@ -108,13 +108,13 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
     if (!next) return
     const previous = order.status
     onClose()
-    void updateOrderStatus(order.id, next).then((success) => {
-      if (!success) return
+    void updateOrderStatus({ id: order.id, status: next }).then((updatedOrder) => {
+      if (!updatedOrder) return
       uiActions.showToastWithAction(
         `Đơn #${order.id} → ${ORDER_STATUS_LABEL[next]}`,
         'Hoàn tác',
         () => {
-          void updateOrderStatus(order.id, previous).then((rolledBack) => {
+          void updateOrderStatus({ id: order.id, status: previous }).then((rolledBack) => {
             if (rolledBack) uiActions.showToast(`Đã hoàn tác về ${ORDER_STATUS_LABEL[previous]}.`)
           })
         },
@@ -127,13 +127,13 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
     if (!prev) return
     const previous = order.status
     onClose()
-    void updateOrderStatus(order.id, prev).then((success) => {
-      if (!success) return
+    void updateOrderStatus({ id: order.id, status: prev }).then((updatedOrder) => {
+      if (!updatedOrder) return
       uiActions.showToastWithAction(
         `Đã hoàn tác về ${ORDER_STATUS_LABEL[prev]}`,
         'Làm lại',
         () => {
-          void updateOrderStatus(order.id, previous).then((redone) => {
+          void updateOrderStatus({ id: order.id, status: previous }).then((redone) => {
             if (redone) uiActions.showToast(`Đã chuyển lại sang ${ORDER_STATUS_LABEL[previous]}.`)
           })
         },
@@ -143,8 +143,8 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
 
   const handleCancel = () => {
     onClose()
-    void updateOrderStatus(order.id, 'CANCELLED').then((success) => {
-      if (success) uiActions.showToast(`Đơn #${order.id} đã bị huỷ.`)
+    void updateOrderStatus({ id: order.id, status: 'CANCELLED' }).then((updatedOrder) => {
+      if (updatedOrder) uiActions.showToast(`Đơn #${order.id} đã bị huỷ.`)
     })
   }
 

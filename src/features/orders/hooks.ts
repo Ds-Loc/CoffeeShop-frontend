@@ -30,6 +30,7 @@ export const useUpdateOrderStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus({ id, status }),
     onSuccess: (updatedOrder) => {
+      if (!updatedOrder) return
       // 1. Invalidate cache danh sách đơn hàng
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       // 2. Set dữ liệu tươi cho chi tiết đơn vừa cập nhật

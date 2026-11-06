@@ -28,6 +28,8 @@ export const ordersActions = {
   add: (order: Order) =>
     ordersHistoryStore.setState((orders) => [...orders, order]),
 
+  setAll: (orders: Order[]) => ordersHistoryStore.setState(orders),
+
   getById: (id: string) =>
     ordersHistoryStore.getState().present.find((item) => item.id === id),
 
