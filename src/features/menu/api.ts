@@ -4,7 +4,7 @@ import { createStore, useStore } from '@/lib/store'
 import { MOCK_PRODUCTS } from './data/mock-products'
 import type { Product } from './types'
 
-const productsStore = createStore<Product[]>(MOCK_PRODUCTS, {
+const productsHistoryStore = createHistoryStore<Product[]>(MOCK_PRODUCTS, {
   storageKey: 'brewlite:products',
   validate: (value): value is Product[] => Array.isArray(value),
 })

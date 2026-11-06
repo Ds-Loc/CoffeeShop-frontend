@@ -65,9 +65,19 @@ export const useUpdateOrderStatus = () => {
         typeof error.message === 'string'
           ? error.message
           : 'Vui lòng kiểm tra kết nối và thử lại.'
-      uiActions.showToast(`Không thể cập nhật đơn #${id}: ${message}`)
+      uiActions.showErrorToast(`Không thể cập nhật đơn #${id}: ${message}`)
     },
-    onSuccess: (updatedOrder) => {
+    onSuccess: (updatedOrder, { id }, context) => {
+      if (!updatedOrder) {
+        if (context?.previousOrders) {
+          queryClient.setQueryData(ordersQueryKey, context.previousOrders)
+        }
+        if (context?.previousOrder) {
+          queryClient.setQueryData(orderQueryKey(id), context.previousOrder)
+        }
+        return
+      }
+
       queryClient.setQueryData<Order[]>(ordersQueryKey, (orders) =>
         orders?.map((order) => (order.id === updatedOrder.id ? updatedOrder : order)),
       )

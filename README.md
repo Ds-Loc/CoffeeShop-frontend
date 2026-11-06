@@ -127,6 +127,7 @@ Các API mẫu được ghi chú trực tiếp tại:
 
 - [src/features/menu/api.ts](./src/features/menu/api.ts): `GET /products`
 - [src/features/checkout/api.ts](./src/features/checkout/api.ts): `POST /orders`
+- [src/features/orders/api.ts](./src/features/orders/api.ts): `PATCH /orders/{id}/status` với body `{ "status": "PREPARING" }`. Trang admin cập nhật trạng thái lạc quan và khôi phục trạng thái trước đó nếu API lỗi.
 
 Backend cần trả JSON phù hợp với các type trong:
 

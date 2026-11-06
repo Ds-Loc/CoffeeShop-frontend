@@ -6,23 +6,6 @@ import { routeTree } from './routeTree.gen'
 import { enableMocking } from './mocks'
 import './index.css'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-    },
-  },
-})
-
-const router = createRouter({ routeTree })
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router
-  }
-}
-
 enableMocking().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <StrictMode>
