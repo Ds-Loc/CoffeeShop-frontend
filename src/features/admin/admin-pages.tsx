@@ -9,7 +9,7 @@ import { Overlay } from '@/components/ui/overlay'
 import { StatusPill } from '@/features/orders/components/status-pill'
 import { ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/features/orders/constants'
 import { updateOrderStatus } from '@/features/orders/api'
-import { useOrders } from '@/features/orders/orders.store'
+import { useOrders } from '@/features/orders/hooks'
 import type { Order, OrderStatus } from '@/features/orders/types'
 import { formatDateTime, formatVnd } from '@/lib/format'
 import {
@@ -205,7 +205,7 @@ function OrderDrawer({ order, onClose }: { order: Order; onClose: () => void }) 
 }
 
 export function AdminOrdersPage() {
-  const orders = useOrders()
+  const { data: orders = [] } = useOrders()
   const [filter, setFilter] = useState<typeof statuses[number]>('ALL')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Order | null>(null)
@@ -251,17 +251,32 @@ export function AdminOrdersPage() {
   )
 }
 
-function ProductDialog({ product, onClose, onSaved }: { product?: Product; onClose: () => void; onSaved: (isEdit: boolean, name: string) => void }) {
+function ProductDialog({
+  product,
+  onClose,
+  onSave,
+}: {
+  product?: Product
+  onClose: () => void
+  onSave: (product: Product, isEdit: boolean) => Promise<void>
+}) {
   const [name, setName] = useState(product?.name ?? '')
   const [price, setPrice] = useState(String(product?.basePrice ?? 0))
-  const save = (event: FormEvent<HTMLFormElement>) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const defaults: Product = { id: `product-${Date.now()}`, category: 'Cà phê', description: '', imageUrl: '', sizes: [{ id: 'S', label: 'S', priceDelta: -5000 }, { id: 'M', label: 'M', priceDelta: 0 }, { id: 'L', label: 'L', priceDelta: 5000 }], toppings: [], name: '', basePrice: 0, available: true }
     const next = { ...(product ?? defaults), name: name.trim(), basePrice: Number(price), available: true }
-    if (product) productsActions.update(next)
-    else productsActions.add(next)
-    onSaved(!!product, name.trim())
-    onClose()
+    try {
+      await onSave(next, Boolean(product))
+      onClose()
+    } catch (error) {
+      const message =
+        typeof error === 'object' && error !== null && 'message' in error &&
+        typeof error.message === 'string'
+          ? error.message
+          : 'Vui lòng thử lại.'
+      uiActions.showErrorToast(`Không thể lưu món: ${message}`)
+    }
   }
   return (
     <Overlay onClose={onClose}>
@@ -277,36 +292,57 @@ function ProductDialog({ product, onClose, onSaved }: { product?: Product; onClo
 }
 
 export function AdminMenuPage() {
-  const products = useAllProducts()
+  const { data: products = [], isPending, isError } = useAdminProducts()
+  const createProduct = useCreateProduct()
+  const updateProduct = useUpdateProduct()
+  const deleteProduct = useDeleteProduct()
   const [editing, setEditing] = useState<Product | undefined>()
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState<Product | undefined>()
 
-  const handleSaved = (isEdit: boolean, name: string) => {
-    if (isEdit) {
-      uiActions.showToastWithAction(`Đã cập nhật "${name}"`, 'Hoàn tác', () => productsActions.undo())
-    } else {
-      uiActions.showToastWithAction(`Đã thêm "${name}"`, 'Hoàn tác', () => productsActions.undo())
-    }
+  const withUndo = (message: string, action: () => Promise<unknown>, successMessage: string) => {
+    uiActions.showToastWithAction(message, 'Hoàn tác', () => {
+      void action()
+        .then(() => uiActions.showToast(successMessage))
+        .catch(() => uiActions.showErrorToast('Không thể hoàn tác. Vui lòng thử lại.'))
+    })
   }
 
-  const handleToggleAvailable = (product: Product) => {
-    const next = product.available === false
-    productsActions.update({ ...product, available: next })
-    uiActions.showToastWithAction(
-      next ? `Đã hiện "${product.name}"` : `Đã ẩn "${product.name}"`,
-      'Hoàn tác',
-      () => productsActions.undo(),
+  const handleSave = async (product: Product, isEdit: boolean) => {
+    const previousProduct = editing
+    const saved = isEdit
+      ? await updateProduct.mutateAsync(product)
+      : await createProduct.mutateAsync(product)
+
+    withUndo(
+      `${isEdit ? 'Đã cập nhật' : 'Đã thêm'} "${saved.name}"`,
+      () =>
+        isEdit && previousProduct
+          ? updateProduct.mutateAsync(previousProduct)
+          : deleteProduct.mutateAsync(saved.id),
+      isEdit && previousProduct
+        ? `Đã khôi phục "${previousProduct.name}".`
+        : `Đã xoá "${saved.name}".`,
     )
   }
 
-  const handleDelete = (product: Product) => {
-    productsActions.remove(product.id)
+  const handleToggleAvailable = async (product: Product) => {
+    const next = product.available === false
+    await updateProduct.mutateAsync({ ...product, available: next })
+    withUndo(
+      next ? `Đã hiện "${product.name}"` : `Đã ẩn "${product.name}"`,
+      () => updateProduct.mutateAsync(product),
+      `Đã khôi phục "${product.name}".`,
+    )
+  }
+
+  const handleDelete = async (product: Product) => {
+    await deleteProduct.mutateAsync(product.id)
     setDeleting(undefined)
-    uiActions.showToastWithAction(
+    withUndo(
       `Đã xoá "${product.name}"`,
-      'Hoàn tác',
-      () => productsActions.undo(),
+      () => createProduct.mutateAsync(product),
+      `Đã khôi phục "${product.name}".`,
     )
   }
 
@@ -316,7 +352,12 @@ export function AdminMenuPage() {
       <div className="mb-5 flex justify-end">
         <Button onClick={() => { setEditing(undefined); setOpen(true) }}>+ Thêm món</Button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {isPending ? (
+        <p className="py-20 text-center text-sm text-muted">Đang tải thực đơn...</p>
+      ) : isError ? (
+        <EmptyState icon={<CartIcon size={24} />} description="Vui lòng tải lại trang hoặc thử lại sau." title="Không thể tải thực đơn" />
+      ) : products.length ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((product) => (
           <article className={card} key={product.id}>
             <div className="flex items-start justify-between gap-3">
@@ -331,21 +372,32 @@ export function AdminMenuPage() {
             <p className="mt-5 font-bold">{formatVnd(product.basePrice)}</p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Button onClick={() => { setEditing(product); setOpen(true) }} variant="secondary">Sửa</Button>
-              <Button onClick={() => handleToggleAvailable(product)} variant="secondary">
+              <Button onClick={() => {
+                void handleToggleAvailable(product).catch(() =>
+                  uiActions.showErrorToast('Không thể cập nhật món. Vui lòng thử lại.'),
+                )
+              }} variant="secondary">
                 {product.available === false ? 'Hiện món' : 'Ẩn món'}
               </Button>
               <Button onClick={() => setDeleting(product)} variant="secondary">Xoá</Button>
             </div>
           </article>
         ))}
-      </div>
-      {open && <ProductDialog onClose={() => setOpen(false)} onSaved={handleSaved} product={editing} />}
+        </div>
+      ) : (
+        <EmptyState icon={<CartIcon size={24} />} description="Thêm món đầu tiên để bắt đầu quản lý thực đơn." title="Chưa có món nào" />
+      )}
+      {open && <ProductDialog onClose={() => setOpen(false)} onSave={handleSave} product={editing} />}
       {deleting && (
         <ConfirmDialog
           confirmLabel="Xoá món"
           description="Bạn vẫn có thể hoàn tác ngay sau khi xoá."
           onClose={() => setDeleting(undefined)}
-          onConfirm={() => handleDelete(deleting)}
+          onConfirm={() => {
+            void handleDelete(deleting).catch(() =>
+              uiActions.showErrorToast('Không thể xoá món. Vui lòng thử lại.'),
+            )
+          }}
           title={`Xoá "${deleting.name}"?`}
         />
       )}

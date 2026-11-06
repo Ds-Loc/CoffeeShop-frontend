@@ -1,18 +1,18 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { routeTree } from './routeTree.gen'
+import { App } from './App'
 import { enableMocking } from './mocks'
 import './index.css'
 
-enableMocking().then(() => {
+const renderApp = () => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <App />
     </StrictMode>,
   )
-})
+}
 
+enableMocking().then(renderApp).catch((error: unknown) => {
+  console.error('[App] Không thể khởi động MSW; tiếp tục tải ứng dụng:', error)
+  renderApp()
+})

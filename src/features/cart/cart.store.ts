@@ -1,5 +1,4 @@
 import { createHistoryStore, useCanRedo, useCanUndo, useHistoryPresent } from '@/lib/history-store'
-import { useStore } from '@/lib/store'
 import type { CartItem } from './types'
 
 const cartHistoryStore = createHistoryStore<CartItem[]>([], {
